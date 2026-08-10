@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
+      - run: npm ci --registry=https://registry.npmjs.org/
       - run: npm test -- --ci
 
   e2e:
@@ -24,8 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npm ci --registry=https://registry.npmjs.org/
+      - run: npx playwright install --with-deps chromium --registry=https://registry.npmjs.org/
       - run: npm run test:e2e
         env:
           CI: true
