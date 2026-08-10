@@ -235,7 +235,7 @@ function Tracker({ session }) {
                   <div className="serif text-xl">{pName} in {sign}</div>
                   <div className="text-sm mono" style={{ color: COLORS.inkSoft }}>{illum}% illuminated</div>
                   <div className="text-sm mt-1">{PHASE_BLURB[pName]}</div>
-                  <div className="text-sm mt-1">The moon is in {sign}, a sign that's typically {SIGN_BLURB[sign]}.</div>
+                  <div className="text-sm mt-1">The moon is currently in {sign}, traditionally associated with being {SIGN_BLURB[sign]}.</div>
                   {transitAspect && (
                       <div className="text-sm mt-1" style={{ color: COLORS.accentDeep }}>
                         {transitAspect.type} your natal moon ({natalMoon.sign}) — orb {transitAspect.orb}°
