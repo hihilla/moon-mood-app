@@ -234,7 +234,8 @@ function Tracker({ session }) {
                 <div>
                   <div className="serif text-xl">{pName} in {sign}</div>
                   <div className="text-sm mono" style={{ color: COLORS.inkSoft }}>{illum}% illuminated</div>
-                  <div className="text-sm mt-1">{PHASE_BLURB[pName]} — moon feels {SIGN_BLURB[sign]}.</div>
+                  <div className="text-sm mt-1">{PHASE_BLURB[pName]}</div>
+                  <div className="text-sm mt-1">The moon is in {sign}, a sign that's typically {SIGN_BLURB[sign]}.</div>
                   {transitAspect && (
                       <div className="text-sm mt-1" style={{ color: COLORS.accentDeep }}>
                         {transitAspect.type} your natal moon ({natalMoon.sign}) — orb {transitAspect.orb}°
@@ -244,7 +245,7 @@ function Tracker({ session }) {
               </div>
               {horoscope && (horoscope.houseLine || horoscope.aspectLine) && (
                   <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${COLORS.line}` }}>
-                    <div className="text-sm font-medium mb-1.5" style={{ color: COLORS.inkSoft }}>What this means for you</div>
+                    <div className="text-sm font-medium mb-1.5" style={{ color: COLORS.inkSoft }}>Your horoscope today</div>
                     {horoscope.houseLine && <div className="text-sm">{horoscope.houseLine}</div>}
                     {horoscope.aspectLine && <div className="text-sm mt-1">{horoscope.aspectLine}</div>}
                   </div>
