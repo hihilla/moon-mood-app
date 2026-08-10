@@ -37,7 +37,11 @@ test.describe("onboarding", () => {
     await page.goto("/onboarding");
   });
 
-  test("requires a date and a selected place before submitting", async ({ page }) => {
+  test("requires a place before submitting, even with a date filled in", async ({ page }) => {
+    // The date input has `required`, so the browser's native validation blocks
+    // submission before our JS runs if it's empty too — filling it in is what
+    // lets the click actually reach our own "place is missing" check.
+    await page.locator('input[type="date"]').fill("1995-06-10");
     await page.getByRole("button", { name: /Generate my chart/ }).click();
     await expect(page.getByText(/Pick a birth date and a place/)).toBeVisible();
   });

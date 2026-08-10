@@ -19,8 +19,11 @@ test.describe("today tab", () => {
   test("shows today's moon phase and sign", async ({ page }) => {
     await signIn(page);
     // e.g. "Waning Gibbous in Scorpio" — exact values are date-dependent,
-    // so just assert the pattern renders, not a specific phase/sign.
-    await expect(page.locator("text=/.+ Moon in .+|.+ Quarter in .+/")).toBeVisible();
+    // so match against all eight possible phase names rather than a
+    // specific one.
+    const phasePattern =
+      /(New Moon|Waxing Crescent|First Quarter|Waxing Gibbous|Full Moon|Waning Gibbous|Last Quarter|Waning Crescent) in .+/;
+    await expect(page.getByText(phasePattern)).toBeVisible();
   });
 
   test("selecting mood tags and saving shows a confirmation", async ({ page }) => {
@@ -46,7 +49,10 @@ test.describe("today tab", () => {
   test("can switch to the Upcoming tab and see 28 days listed", async ({ page }) => {
     await signIn(page);
     await page.getByRole("button", { name: "Upcoming" }).click();
-    const rows = page.locator("text=/Mon|Tue|Wed|Thu|Fri|Sat|Sun/");
+    // Each upcoming row renders "<phase> · <sign>" — the "·" only appears
+    // once per row, unlike a weekday-abbreviation match, which also caught
+    // the page header's full date (e.g. "Monday" contains "Mon").
+    const rows = page.locator("text=/·/");
     await expect(rows).toHaveCount(28);
   });
 
