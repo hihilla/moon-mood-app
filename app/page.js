@@ -11,7 +11,7 @@ import { Card, Pill, MoonGlyph } from "@/components/ui";
 import AuthGate from "@/components/AuthGate";
 import {
   moonEclipticLongitude, moonSign, moonPhaseFraction, phaseName, illumination,
-  aspectBetween, dateKey, fmtDate,
+  aspectBetween, buildDailyHoroscope, dateKey, fmtDate,
 } from "@/lib/astro";
 
 const emptyDraft = { moods: [], energy: 3, period: false, cried: false, bloated: false, notes: "" };
@@ -93,6 +93,13 @@ function Tracker({ session }) {
 
   const natalMoon = profile?.natal_chart?.tropical?.planets?.find((p) => p.name === "Moon");
   const transitAspect = natalMoon ? aspectBetween(todayLon, natalMoon.longitude) : null;
+  const horoscope = profile?.natal_chart?.tropical
+      ? buildDailyHoroscope({
+        transitLongitude: todayLon,
+        natalPlanets: profile.natal_chart.tropical.planets,
+        natalHouses: profile.natal_chart.tropical.houses,
+      })
+      : null;
 
   /* ---------- cycle prediction ---------- */
   const cyclePrediction = useMemo(() => {
@@ -229,12 +236,19 @@ function Tracker({ session }) {
                   <div className="text-sm mono" style={{ color: COLORS.inkSoft }}>{illum}% illuminated</div>
                   <div className="text-sm mt-1">{PHASE_BLURB[pName]} — moon feels {SIGN_BLURB[sign]}.</div>
                   {transitAspect && (
-                    <div className="text-sm mt-1" style={{ color: COLORS.accentDeep }}>
-                      {transitAspect.type} your natal moon ({natalMoon.sign}) — orb {transitAspect.orb}°
-                    </div>
+                      <div className="text-sm mt-1" style={{ color: COLORS.accentDeep }}>
+                        {transitAspect.type} your natal moon ({natalMoon.sign}) — orb {transitAspect.orb}°
+                      </div>
                   )}
                 </div>
               </div>
+              {horoscope && (horoscope.houseLine || horoscope.aspectLine) && (
+                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${COLORS.line}` }}>
+                    <div className="text-sm font-medium mb-1.5" style={{ color: COLORS.inkSoft }}>What this means for you</div>
+                    {horoscope.houseLine && <div className="text-sm">{horoscope.houseLine}</div>}
+                    {horoscope.aspectLine && <div className="text-sm mt-1">{horoscope.aspectLine}</div>}
+                  </div>
+              )}
             </Card>
 
             <Card>
