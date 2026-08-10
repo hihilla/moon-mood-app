@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #EDEAE4;
+  color: #2E2B33;
+  font-family: 'Inter', sans-serif;
+}
+
+.serif { font-family: 'Fraunces', serif; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+input[type=range] { accent-color: #8C6F8B; }
+::selection { background: #8C6F8B; color: white; }
