@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Card, Pill, MoonGlyph } from "@/components/ui";
+import { Card, Pill, MoonGlyph, PlanetReading } from "@/components/ui";
 
 describe("Card", () => {
   test("renders its children", () => {
@@ -61,5 +61,52 @@ describe("MoonGlyph", () => {
     const { container } = render(<MoonGlyph frac={frac} />);
     const path = container.querySelector("path");
     expect(path.getAttribute("d")).toMatch(/^M /);
+  });
+});
+
+describe("PlanetReading", () => {
+  const fullReading = {
+    planet: "Sun",
+    theme: "sense of identity and confidence",
+    houseFact: "Focused on friends, community, and future goals.",
+    aspectFact: "Intensifying your natal Moon — emotions and gut reactions.",
+  };
+
+  test("renders the planet name as a heading, theme once, and both bullets", () => {
+    render(<PlanetReading reading={fullReading} />);
+    expect(screen.getByText("Sun")).toBeInTheDocument();
+    expect(screen.getByText("sense of identity and confidence")).toBeInTheDocument();
+    expect(screen.getByText(/Focused on friends, community, and future goals\./)).toBeInTheDocument();
+    expect(screen.getByText(/Intensifying your natal Moon/)).toBeInTheDocument();
+  });
+
+  test("renders nothing when reading is null (e.g. no natal chart yet)", () => {
+    const { container } = render(<PlanetReading reading={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test("renders nothing when there's neither a house nor an aspect fact", () => {
+    const { container } = render(
+      <PlanetReading reading={{ planet: "Sun", theme: "x", houseFact: null, aspectFact: null }} />
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  test("renders just the house bullet when there's no aspect", () => {
+    render(
+      <PlanetReading
+        reading={{ planet: "Mars", theme: "drive", houseFact: "Focused on home.", aspectFact: null }}
+      />
+    );
+    expect(screen.getByText(/Focused on home\./)).toBeInTheDocument();
+  });
+
+  test("renders just the aspect bullet when there's no house", () => {
+    render(
+      <PlanetReading
+        reading={{ planet: "Mars", theme: "drive", houseFact: null, aspectFact: "Creating friction around your natal Sun." }}
+      />
+    );
+    expect(screen.getByText(/Creating friction around/)).toBeInTheDocument();
   });
 });

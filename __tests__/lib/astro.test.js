@@ -355,20 +355,32 @@ describe("buildFullHoroscope", () => {
     expect(moonEntries[0].house).toBe(houseForLongitude(15, evenHouses));
   });
 
-  test("phrases the moon's line distinctly from other planets' lines", () => {
+  test("each entry includes the planet's own theme once, for use as a heading subtitle", () => {
     const result = buildFullHoroscope({
       moonLongitude: 15,
-      transitPlanets: [{ name: "Mars", longitude: 95 }], // square natal Mars @ 100... within orb
+      transitPlanets: [{ name: "Sun", longitude: 200 }],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const sunEntry = result.find((r) => r.planet === "Sun");
+    const moonEntry = result.find((r) => r.planet === "Moon");
+    expect(sunEntry.theme).toBe("sense of identity and confidence");
+    expect(moonEntry.theme).toBe("emotions and gut reactions");
+  });
+
+  test("houseFact is a standalone clause, not a full sentence repeating the planet as subject", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 100, // house 4
+      transitPlanets: [],
       natalPlanets,
       natalHouses: evenHouses,
     });
     const moonEntry = result.find((r) => r.planet === "Moon");
-    const marsEntry = result.find((r) => r.planet === "Mars");
-    expect(moonEntry.houseLine).toMatch(/^Your Moon/);
-    expect(marsEntry.houseLine).toMatch(/^Your Mars/);
+    expect(moonEntry.houseFact).toBe("Focused on home, family, and roots.");
+    expect(moonEntry.houseFact).not.toMatch(/Moon/); // no repeated subject
   });
 
-  test("aspect line names both the transiting and natal planet explicitly, not a bare pronoun", () => {
+  test("aspectFact names the natal planet explicitly, not a bare pronoun, and is capitalized", () => {
     const result = buildFullHoroscope({
       moonLongitude: 15,
       transitPlanets: [{ name: "Venus", longitude: 10 }], // conjunct natal Sun @ 10
@@ -376,9 +388,9 @@ describe("buildFullHoroscope", () => {
       natalHouses: evenHouses,
     });
     const venusEntry = result.find((r) => r.planet === "Venus");
-    expect(venusEntry.aspectLine).toMatch(/^Your Venus is/);
-    expect(venusEntry.aspectLine).toMatch(/natal Sun/);
-    expect(venusEntry.aspectLine).not.toMatch(/^It's/);
+    expect(venusEntry.aspectFact).toBe("Intensifying your natal Sun — sense of identity and confidence.");
+    expect(venusEntry.aspectFact).not.toMatch(/^It's/);
+    expect(venusEntry.aspectFact).not.toMatch(/^Your Venus/); // no repeated subject either
   });
 
   test("a transiting planet can aspect a natal planet of the same name", () => {
@@ -390,20 +402,7 @@ describe("buildFullHoroscope", () => {
     });
     const sunEntry = result.find((r) => r.planet === "Sun");
     expect(sunEntry.topAspect.natalPlanet).toBe("Sun");
-    expect(sunEntry.aspectLine).toMatch(/sense of identity and confidence/);
-  });
-
-  test("house line spells out that this is part of the chart, not a bare fragment", () => {
-    const result = buildFullHoroscope({
-      moonLongitude: 100, // house 4
-      transitPlanets: [],
-      natalPlanets,
-      natalHouses: evenHouses,
-    });
-    const moonEntry = result.find((r) => r.planet === "Moon");
-    expect(moonEntry.houseLine).toBe(
-        "Your Moon — your emotions and gut reactions — is focused on home, family, and roots."
-    );
+    expect(sunEntry.aspectFact).toMatch(/sense of identity and confidence/);
   });
 
   test("ignores obscure natal bodies with no plain-language theme (e.g. Ceres) as aspect targets", () => {
@@ -414,7 +413,7 @@ describe("buildFullHoroscope", () => {
       natalHouses: evenHouses,
     });
     const venusEntry = result.find((r) => r.planet === "Venus");
-    expect(venusEntry.aspectLine).toBeNull();
+    expect(venusEntry.aspectFact).toBeNull();
     expect(venusEntry.topAspect).toBeNull();
   });
 
@@ -442,10 +441,10 @@ describe("buildFullHoroscope", () => {
     });
     const venusEntry = result.find((r) => r.planet === "Venus");
     expect(venusEntry.topAspect.natalPlanet).toBe("Ascendant");
-    expect(venusEntry.aspectLine).toMatch(/the way you come across to others/);
+    expect(venusEntry.aspectFact).toMatch(/the way you come across to others/);
   });
 
-  test("returns houseLine/aspectLine as null, not throwing, with no natal chart at all", () => {
+  test("returns houseFact/aspectFact as null, not throwing, with no natal chart at all", () => {
     const result = buildFullHoroscope({
       moonLongitude: 15,
       transitPlanets: [{ name: "Sun", longitude: 200 }],
@@ -453,8 +452,8 @@ describe("buildFullHoroscope", () => {
       natalHouses: null,
     });
     result.forEach((r) => {
-      expect(r.houseLine).toBeNull();
-      expect(r.aspectLine).toBeNull();
+      expect(r.houseFact).toBeNull();
+      expect(r.aspectFact).toBeNull();
     });
   });
 
@@ -474,8 +473,8 @@ describe("buildFullHoroscope", () => {
       natalHouses: evenHouses,
     });
     result.forEach((r) => {
-      if (r.aspectLine) {
-        expect(r.aspectLine.length).toBeGreaterThan(10);
+      if (r.aspectFact) {
+        expect(r.aspectFact.length).toBeGreaterThan(10);
       }
     });
   });

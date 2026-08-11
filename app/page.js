@@ -7,14 +7,14 @@ import {
 } from "recharts";
 import { supabase } from "@/lib/supabaseClient";
 import { COLORS, MOOD_TAGS, PHASE_BLURB, SIGN_BLURB } from "@/lib/theme";
-import { Card, Pill, MoonGlyph } from "@/components/ui";
+import { Card, Pill, MoonGlyph, PlanetReading } from "@/components/ui";
 import AuthGate from "@/components/AuthGate";
 import {
   moonEclipticLongitude, moonSign, moonPhaseFraction, phaseName, illumination,
   aspectBetween, buildFullHoroscope, dateKey, fmtDate,
 } from "@/lib/astro";
 
-const emptyDraft = { moods: [], energy: 3, period: false, cried: false, bloated: false, notes: "" };
+const emptyDraft = { moods: [], energy: 3, period: false, cried: false, bloated: false, acne: false, coldSore: false, notes: "" };
 
 function Tracker({ session }) {
   const [profile, setProfile] = useState(undefined);
@@ -46,6 +46,8 @@ function Tracker({ session }) {
           period: row.period,
           cried: row.cried,
           bloated: row.bloated,
+          acne: row.acne,
+          coldSore: row.cold_sore,
           notes: row.notes || "",
         };
       });
@@ -78,6 +80,8 @@ function Tracker({ session }) {
       period: draft.period,
       cried: draft.cried,
       bloated: draft.bloated,
+      acne: draft.acne,
+      cold_sore: draft.coldSore,
       notes: draft.notes,
     });
     setEntries((prev) => ({ ...prev, [todayKey]: draft }));
@@ -268,21 +272,21 @@ function Tracker({ session }) {
                   </div>
                   {(sunReading || moonReading || otherReadings.length > 0) && (
                       <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${COLORS.line}` }}>
-                        <div className="text-sm font-medium mb-1.5" style={{ color: COLORS.inkSoft }}>
+                        <div className="text-sm font-medium mb-3" style={{ color: COLORS.inkSoft }}>
                           Your horoscope today
                           {profile?.natal_chart && !transits && (
                               <span className="mono text-xs" style={{ color: COLORS.inkSoft, marginLeft: 6 }}>(loading full chart…)</span>
                           )}
                         </div>
-                        {sunReading?.houseLine && <div className="text-sm">{sunReading.houseLine}</div>}
-                        {sunReading?.aspectLine && <div className="text-sm mt-1">{sunReading.aspectLine}</div>}
-                        {moonReading?.houseLine && <div className="text-sm mt-2">{moonReading.houseLine}</div>}
-                        {moonReading?.aspectLine && <div className="text-sm mt-1">{moonReading.aspectLine}</div>}
+
+                        <PlanetReading reading={sunReading} />
+                        <PlanetReading reading={moonReading} />
+
                         {otherReadings.length > 0 && (
-                            <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${COLORS.line}` }}>
-                              <div className="text-xs font-medium mb-1" style={{ color: COLORS.inkSoft }}>Also worth noting today</div>
+                            <div className="mt-1 pt-3" style={{ borderTop: `1px solid ${COLORS.line}` }}>
+                              <div className="text-xs font-medium mb-2" style={{ color: COLORS.inkSoft }}>Other planets worth noting</div>
                               {otherReadings.map((r) => (
-                                  <div key={r.planet} className="text-sm mt-1">{r.aspectLine}</div>
+                                  <PlanetReading key={r.planet} reading={r} />
                               ))}
                             </div>
                         )}
@@ -309,7 +313,7 @@ function Tracker({ session }) {
 
                 <Card>
                   <div className="flex flex-wrap gap-2">
-                    {[["period", "Period", COLORS.rose], ["cried", "Cried", COLORS.accent], ["bloated", "Bloated", COLORS.sage]].map(([key, label, color]) => (
+                    {[["period", "Period", COLORS.rose], ["cried", "Cried", COLORS.accent], ["bloated", "Bloated", COLORS.sage], ["acne", "Acne", COLORS.gold], ["coldSore", "Cold Sore", COLORS.accentDeep]].map(([key, label, color]) => (
                         <button
                             key={key}
                             onClick={() => setDraft((d) => ({ ...d, [key]: !d[key] }))}
@@ -362,6 +366,8 @@ function Tracker({ session }) {
                               {e.period && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.rose, color: "#fff" }}>period</span>}
                               {e.cried && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.accent, color: "#fff" }}>cried</span>}
                               {e.bloated && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.sage, color: "#fff" }}>bloated</span>}
+                              {e.acne && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.gold, color: "#fff" }}>acne</span>}
+                              {e.coldSore && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: COLORS.accentDeep, color: "#fff" }}>cold sore</span>}
                             </div>
                             {e.notes && <div className="text-sm mt-2">{e.notes}</div>}
                           </div>
