@@ -364,11 +364,11 @@ describe("buildFullHoroscope", () => {
     });
     const moonEntry = result.find((r) => r.planet === "Moon");
     const marsEntry = result.find((r) => r.planet === "Mars");
-    expect(moonEntry.houseLine).toMatch(/^Transiting moon is moving/);
-    expect(marsEntry.houseLine).toMatch(/^Transiting Mars is moving/);
+    expect(moonEntry.houseLine).toMatch(/^Your Moon/);
+    expect(marsEntry.houseLine).toMatch(/^Your Mars/);
   });
 
-  test("aspect line names the transiting planet explicitly, not a bare pronoun", () => {
+  test("aspect line names both the transiting and natal planet explicitly, not a bare pronoun", () => {
     const result = buildFullHoroscope({
       moonLongitude: 15,
       transitPlanets: [{ name: "Venus", longitude: 10 }], // conjunct natal Sun @ 10
@@ -376,7 +376,8 @@ describe("buildFullHoroscope", () => {
       natalHouses: evenHouses,
     });
     const venusEntry = result.find((r) => r.planet === "Venus");
-    expect(venusEntry.aspectLine).toMatch(/^Transiting Venus is/);
+    expect(venusEntry.aspectLine).toMatch(/^Your Venus is/);
+    expect(venusEntry.aspectLine).toMatch(/natal Sun/);
     expect(venusEntry.aspectLine).not.toMatch(/^It's/);
   });
 
@@ -401,7 +402,7 @@ describe("buildFullHoroscope", () => {
     });
     const moonEntry = result.find((r) => r.planet === "Moon");
     expect(moonEntry.houseLine).toBe(
-        "Transiting moon is moving through your 4th house — the part of your chart about home, family, and roots."
+        "Your Moon — your emotions and gut reactions — is focused on home, family, and roots."
     );
   });
 
