@@ -293,8 +293,8 @@ function Tracker({ session }) {
 
                         <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${COLORS.line}` }}>
                           <div className="text-xs" style={{ color: COLORS.inkSoft }}>
-                            <b>How to read this:</b><br></br>
-                            the first bullet is where that planet's energy is currently playing out — a life area, based on where it sits in your chart.<br></br>
+                            <b>How to read this:</b><br/>
+                            the first bullet is where that planet's energy is currently playing out — a life area, based on where it sits in your chart.<br/>
                             The second bullet is whether that planet is forming a tense or easy angle with a different planet in your birth chart right now.</div>
                         </div>
                       </div>
