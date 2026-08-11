@@ -24,12 +24,14 @@ async function callApi(path, payload) {
 }
 
 function toPlanetList(apiOutput) {
-  return (apiOutput.output || []).map((p) => ({
-    name: p.planet.en,
-    longitude: p.fullDegree,
-    sign: p.zodiac_sign.name.en,
-    retrograde: String(p.isRetro).toLowerCase() === "true",
-  }));
+  return (apiOutput.output || [])
+      .filter((p) => p.planet.en !== "Ascendant" && p.planet.en !== "MC")
+      .map((p) => ({
+        name: p.planet.en,
+        longitude: p.fullDegree,
+        sign: p.zodiac_sign.name.en,
+        retrograde: String(p.isRetro).toLowerCase() === "true",
+      }));
 }
 
 export async function GET() {

@@ -10,6 +10,11 @@ import {
   computeAspects,
   aspectBetween,
   toDraconic,
+  houseForLongitude,
+  buildDailyHoroscope,
+  buildFullHoroscope,
+  PLANET_THEME,
+  HOUSE_MEANING,
   dateKey,
   fmtDate,
 } from "@/lib/astro";
@@ -205,6 +210,289 @@ describe("toDraconic", () => {
     expect(sun.longitude).toBeCloseTo(350); // 10 - 20 wraps to 350
     expect(moon.longitude).toBeCloseTo(330); // 350 - 20
     expect(sun.sign).toBe(signFromLongitude(350));
+  });
+});
+
+describe("houseForLongitude", () => {
+  const evenHouses = Array.from({ length: 12 }, (_, i) => ({ house: i + 1, longitude: i * 30 }));
+
+  test("places a longitude in the correct evenly-spaced house", () => {
+    expect(houseForLongitude(5, evenHouses)).toBe(1);
+    expect(houseForLongitude(35, evenHouses)).toBe(2);
+    expect(houseForLongitude(355, evenHouses)).toBe(12);
+  });
+
+  test("is inclusive of a house's own cusp and exclusive of the next", () => {
+    expect(houseForLongitude(30, evenHouses)).toBe(2); // exactly on house 2's cusp -> house 2
+    expect(houseForLongitude(29.999, evenHouses)).toBe(1); // just before -> still house 1
+  });
+
+  test("handles a house range that wraps past 360°/0°", () => {
+    const wrapping = Array.from({ length: 12 }, (_, i) => ({
+      house: i + 1,
+      longitude: norm360Test(350 + i * 30),
+    }));
+    // house 1 now starts at 350° and wraps to house 2's cusp near 20°
+    expect(houseForLongitude(355, wrapping)).toBe(1);
+    expect(houseForLongitude(5, wrapping)).toBe(1);
+  });
+
+  test("returns null when houses data is missing or incomplete", () => {
+    expect(houseForLongitude(10, null)).toBeNull();
+    expect(houseForLongitude(10, undefined)).toBeNull();
+    expect(houseForLongitude(10, [])).toBeNull();
+    expect(houseForLongitude(10, [{ house: 1, longitude: 0 }])).toBeNull();
+  });
+
+  test("does not depend on the input array's order", () => {
+    const shuffled = [...evenHouses].reverse();
+    expect(houseForLongitude(100, shuffled)).toBe(houseForLongitude(100, evenHouses));
+  });
+});
+
+function norm360Test(d) {
+  return ((d % 360) + 360) % 360;
+}
+
+describe("buildDailyHoroscope", () => {
+  const evenHouses = Array.from({ length: 12 }, (_, i) => ({ house: i + 1, longitude: i * 30 }));
+
+  test("identifies the correct house and describes it in plain language", () => {
+    const result = buildDailyHoroscope({
+      transitLongitude: 100, // falls in house 4 (90-120 range)
+      natalPlanets: [],
+      natalHouses: evenHouses,
+    });
+    expect(result.house).toBe(4);
+    expect(result.houseLine).toMatch(/4th house/);
+    expect(result.houseLine).toMatch(/home, family, and roots/);
+    expect(result.houseLine).toMatch(/^The moon is moving/); // explicit subject, not "It's"
+  });
+
+  test("picks the tightest-orb aspect among multiple natal planets", () => {
+    const result = buildDailyHoroscope({
+      transitLongitude: 0,
+      natalPlanets: [
+        { name: "Sun", longitude: 92 }, // square, orb 2
+        { name: "Mars", longitude: 89 }, // square, orb 1 — tighter, should win
+      ],
+      natalHouses: evenHouses,
+    });
+    expect(result.topAspect.planet).toBe("Mars");
+    expect(result.aspectLine).toMatch(/drive, temper, and motivation/);
+    expect(result.aspectLine).not.toMatch(/Square/); // jargon should not leak through
+  });
+
+  test("returns null lines gracefully when there's no natal chart data", () => {
+    const result = buildDailyHoroscope({ transitLongitude: 10, natalPlanets: [], natalHouses: null });
+    expect(result.houseLine).toBeNull();
+    expect(result.aspectLine).toBeNull();
+    expect(result.topAspect).toBeNull();
+  });
+
+  test("ignores natal bodies with no PLANET_THEME entry (e.g. True Node)", () => {
+    const result = buildDailyHoroscope({
+      transitLongitude: 0,
+      natalPlanets: [{ name: "True Node", longitude: 2 }], // would be a tight conjunction
+      natalHouses: evenHouses,
+    });
+    expect(result.topAspect).toBeNull();
+  });
+});
+
+describe("buildFullHoroscope", () => {
+  const evenHouses = Array.from({ length: 12 }, (_, i) => ({ house: i + 1, longitude: i * 30 }));
+  const natalPlanets = [
+    { name: "Sun", longitude: 10 },
+    { name: "Moon", longitude: 190 },
+    { name: "Mars", longitude: 100 },
+  ];
+
+  test("always includes an entry for the moon, using the locally-computed longitude", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const moonEntry = result.find((r) => r.planet === "Moon");
+    expect(moonEntry).toBeDefined();
+    expect(moonEntry.house).toBe(1); // longitude 15 -> house 1
+  });
+
+  test("includes every transiting planet with a known theme, e.g. the Sun", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [
+        { name: "Sun", longitude: 200 },
+        { name: "Mercury", longitude: 205 },
+      ],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    expect(result.map((r) => r.planet)).toEqual(expect.arrayContaining(["Sun", "Mercury", "Moon"]));
+  });
+
+  test("drops planets without a PLANET_THEME entry from the reading (e.g. True Node)", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "True Node", longitude: 50 }],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    expect(result.find((r) => r.planet === "True Node")).toBeUndefined();
+  });
+
+  test("de-duplicates the moon if the API also returns one — local longitude wins", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Moon", longitude: 999 }], // should be filtered out, not used
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const moonEntries = result.filter((r) => r.planet === "Moon");
+    expect(moonEntries).toHaveLength(1);
+    expect(moonEntries[0].house).toBe(houseForLongitude(15, evenHouses));
+  });
+
+  test("phrases the moon's line distinctly from other planets' lines", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Mars", longitude: 95 }], // square natal Mars @ 100... within orb
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const moonEntry = result.find((r) => r.planet === "Moon");
+    const marsEntry = result.find((r) => r.planet === "Mars");
+    expect(moonEntry.houseLine).toMatch(/^Transiting moon is moving/);
+    expect(marsEntry.houseLine).toMatch(/^Transiting Mars is moving/);
+  });
+
+  test("aspect line names the transiting planet explicitly, not a bare pronoun", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Venus", longitude: 10 }], // conjunct natal Sun @ 10
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const venusEntry = result.find((r) => r.planet === "Venus");
+    expect(venusEntry.aspectLine).toMatch(/^Transiting Venus is/);
+    expect(venusEntry.aspectLine).not.toMatch(/^It's/);
+  });
+
+  test("a transiting planet can aspect a natal planet of the same name", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Sun", longitude: 12 }], // conjunct natal Sun @ 10, orb 2
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const sunEntry = result.find((r) => r.planet === "Sun");
+    expect(sunEntry.topAspect.natalPlanet).toBe("Sun");
+    expect(sunEntry.aspectLine).toMatch(/sense of identity and confidence/);
+  });
+
+  test("house line spells out that this is part of the chart, not a bare fragment", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 100, // house 4
+      transitPlanets: [],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    const moonEntry = result.find((r) => r.planet === "Moon");
+    expect(moonEntry.houseLine).toBe(
+        "Transiting moon is moving through your 4th house — the part of your chart about home, family, and roots."
+    );
+  });
+
+  test("ignores obscure natal bodies with no plain-language theme (e.g. Ceres) as aspect targets", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Venus", longitude: 10 }],
+      natalPlanets: [{ name: "Ceres", longitude: 10 }], // exact conjunction, but no theme exists for it
+      natalHouses: evenHouses,
+    });
+    const venusEntry = result.find((r) => r.planet === "Venus");
+    expect(venusEntry.aspectLine).toBeNull();
+    expect(venusEntry.topAspect).toBeNull();
+  });
+
+  test("never lets Ascendant or MC act as the transiting body, even if present in transitPlanets", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [
+        { name: "Ascendant", longitude: 50 },
+        { name: "MC", longitude: 60 },
+      ],
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    expect(result.find((r) => r.planet === "Ascendant")).toBeUndefined();
+    expect(result.find((r) => r.planet === "MC")).toBeUndefined();
+  });
+
+  test("Ascendant/MC can still be the target of a real transiting planet's aspect", () => {
+    const natalWithAngles = [...natalPlanets, { name: "Ascendant", longitude: 50 }];
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Venus", longitude: 52 }], // conjunct natal Ascendant
+      natalPlanets: natalWithAngles,
+      natalHouses: evenHouses,
+    });
+    const venusEntry = result.find((r) => r.planet === "Venus");
+    expect(venusEntry.topAspect.natalPlanet).toBe("Ascendant");
+    expect(venusEntry.aspectLine).toMatch(/the way you come across to others/);
+  });
+
+  test("returns houseLine/aspectLine as null, not throwing, with no natal chart at all", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: [{ name: "Sun", longitude: 200 }],
+      natalPlanets: [],
+      natalHouses: null,
+    });
+    result.forEach((r) => {
+      expect(r.houseLine).toBeNull();
+      expect(r.aspectLine).toBeNull();
+    });
+  });
+
+  test("handles a null transitPlanets (e.g. still loading) without throwing", () => {
+    expect(() =>
+        buildFullHoroscope({ moonLongitude: 15, transitPlanets: null, natalPlanets, natalHouses: evenHouses })
+    ).not.toThrow();
+  });
+
+  test("every PLANET_THEME entry used in a line is a known, non-empty string", () => {
+    const result = buildFullHoroscope({
+      moonLongitude: 15,
+      transitPlanets: Object.keys(PLANET_THEME)
+          .filter((name) => name !== "Ascendant" && name !== "MC")
+          .map((name, i) => ({ name, longitude: i * 17 })),
+      natalPlanets,
+      natalHouses: evenHouses,
+    });
+    result.forEach((r) => {
+      if (r.aspectLine) {
+        expect(r.aspectLine.length).toBeGreaterThan(10);
+      }
+    });
+  });
+});
+
+describe("HOUSE_MEANING / PLANET_THEME data integrity", () => {
+  test("every house 1-12 has a meaning defined", () => {
+    for (let h = 1; h <= 12; h++) {
+      expect(HOUSE_MEANING[h]).toBeTruthy();
+    }
+  });
+
+  test("core chart bodies all have a theme defined", () => {
+    ["Sun", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"].forEach(
+        (name) => {
+          expect(PLANET_THEME[name]).toBeTruthy();
+        }
+    );
   });
 });
 
