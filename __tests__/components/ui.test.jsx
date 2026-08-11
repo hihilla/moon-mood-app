@@ -21,6 +21,16 @@ describe("Pill", () => {
     render(<Pill onClick={() => {}}>Calm</Pill>);
     expect(screen.getByText("Calm")).toHaveAttribute("type", "button");
   });
+
+  test("renders with the filled/active style when active=true", () => {
+    render(<Pill active onClick={() => {}}>Selected</Pill>);
+    expect(screen.getByText("Selected")).toHaveStyle({ color: "#fff" });
+  });
+
+  test("renders with the outline/inactive style when active is falsy", () => {
+    render(<Pill onClick={() => {}}>Unselected</Pill>);
+    expect(screen.getByText("Unselected")).not.toHaveStyle({ color: "#fff" });
+  });
 });
 
 describe("MoonGlyph", () => {
@@ -37,5 +47,19 @@ describe("MoonGlyph", () => {
     const d1 = c1.querySelector("path").getAttribute("d");
     const d2 = c2.querySelector("path").getAttribute("d");
     expect(d1).not.toBe(d2);
+  });
+
+  // moonSvgPath has two internal ternaries (waxing vs waning, and whether
+  // frac sits in the "crescent/gibbous extremes" band or not) — these four
+  // fractions hit all four combinations of those two branches.
+  test.each([
+    [0.1, "waxing, outside the 0.25–0.75 band"],
+    [0.4, "waxing, inside the 0.25–0.75 band"],
+    [0.6, "waning, inside the 0.25–0.75 band"],
+    [0.9, "waning, outside the 0.25–0.75 band"],
+  ])("renders a valid path at frac=%f (%s)", (frac) => {
+    const { container } = render(<MoonGlyph frac={frac} />);
+    const path = container.querySelector("path");
+    expect(path.getAttribute("d")).toMatch(/^M /);
   });
 });

@@ -130,4 +130,73 @@ describe("POST /api/natal-chart", () => {
     expect(res.status).toBe(500);
     expect(body.error).toBeTruthy();
   });
+
+  test("falls back to an empty planet list when a planets response has no output field", async () => {
+    global.fetch = jest.fn((url, options) => {
+      if (url.endsWith("/western/planets")) {
+        return Promise.resolve({ ok: true, json: async () => ({}), text: async () => "" }); // no output at all
+      }
+      return mockFetchImpl(url, options);
+    });
+    const res = await POST(req(BIRTH_PAYLOAD));
+    const body = await res.json();
+    expect(body.tropical.planets).toEqual([]);
+    expect(body.sidereal.planets).toEqual([]);
+  });
+
+  test("falls back to an empty houses list when a houses response is missing Houses", async () => {
+    global.fetch = jest.fn((url, options) => {
+      if (url.endsWith("/western/houses")) {
+        return Promise.resolve({ ok: true, json: async () => ({ output: {} }), text: async () => "" }); // output present, Houses missing
+      }
+      return mockFetchImpl(url, options);
+    });
+    const res = await POST(req(BIRTH_PAYLOAD));
+    const body = await res.json();
+    expect(body.tropical.houses).toEqual([]);
+    expect(body.sidereal.houses).toEqual([]);
+  });
+
+  test("derives an empty draconic chart when there's no True Node among the tropical planets", async () => {
+    const noNode = TROPICAL_PLANETS.filter((p) => p.planet.en !== "True Node");
+    global.fetch = jest.fn((url, options) => {
+      if (url.endsWith("/western/planets")) {
+        return Promise.resolve({ ok: true, json: async () => ({ output: noNode }), text: async () => "" });
+      }
+      return mockFetchImpl(url, options);
+    });
+    const res = await POST(req(BIRTH_PAYLOAD));
+    const body = await res.json();
+    expect(body.draconic.planets).toEqual([]);
+  });
+
+  test("excludes bodies outside the standard planet list (e.g. Ceres) from aspect computation", async () => {
+    const withCeres = [
+      ...TROPICAL_PLANETS,
+      { planet: { en: "Ceres" }, fullDegree: 10, normDegree: 10, isRetro: "false", zodiac_sign: { number: 1, name: { en: "Aries" } } }, // exact conjunction w/ Sun @10°
+    ];
+    global.fetch = jest.fn((url, options) => {
+      if (url.endsWith("/western/planets")) {
+        return Promise.resolve({ ok: true, json: async () => ({ output: withCeres }), text: async () => "" });
+      }
+      return mockFetchImpl(url, options);
+    });
+    const res = await POST(req(BIRTH_PAYLOAD));
+    const body = await res.json();
+
+    // Ceres is still present in the raw planet list (useful for the chart page)...
+    expect(body.tropical.planets.find((p) => p.name === "Ceres")).toBeDefined();
+    // ...but never used as an aspect participant, even with a perfect 0° orb available.
+    const ceresAspect = body.aspects.find((a) => a.a === "Ceres" || a.b === "Ceres");
+    expect(ceresAspect).toBeUndefined();
+  });
+
+  test("falls back to stringifying the raw error when it has no .message property", async () => {
+    global.fetch = jest.fn().mockRejectedValue("raw string failure");
+    const res = await POST(req(BIRTH_PAYLOAD));
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("raw string failure");
+  });
 });

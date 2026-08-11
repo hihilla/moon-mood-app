@@ -33,4 +33,28 @@ describe("getUtcOffsetHours", () => {
   test("falls back gracefully rather than throwing on an unusual zone", () => {
     expect(() => getUtcOffsetHours(new Date(), "Asia/Kathmandu")).not.toThrow();
   });
+
+  describe("with a mocked Intl (forcing otherwise-unreachable fallback branches)", () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+
+    afterEach(() => {
+      global.Intl.DateTimeFormat = RealDateTimeFormat;
+    });
+
+    test("returns 0 when the resolved offset string doesn't match GMT±H[:MM] at all", () => {
+      // Real environments occasionally resolve to a bare zone abbreviation
+      // (e.g. "UTC") instead of "GMT+0" — the regex won't match that.
+      global.Intl.DateTimeFormat = function () {
+        return { formatToParts: () => [{ type: "timeZoneName", value: "UTC" }] };
+      };
+      expect(getUtcOffsetHours(new Date(), "Some/Zone")).toBe(0);
+    });
+
+    test("falls back to the GMT+0 default when no timeZoneName part is present", () => {
+      global.Intl.DateTimeFormat = function () {
+        return { formatToParts: () => [{ type: "literal", value: "" }] }; // no timeZoneName entry
+      };
+      expect(getUtcOffsetHours(new Date(), "Some/Zone")).toBe(0);
+    });
+  });
 });
