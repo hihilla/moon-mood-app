@@ -70,6 +70,7 @@ npm test              # unit + integration (Jest) — no network, no browser
 npm run test:watch    # same, in watch mode while you edit
 npm run test:e2e      # end-to-end (Playwright) — real browser, mocked network
 npm run test:e2e:ui   # same, with Playwright's interactive UI
+npx jest --coverage   # test coverage
 ```
 
 - **Unit tests** (`__tests__/lib`) — the moon phase/sign math, aspect
