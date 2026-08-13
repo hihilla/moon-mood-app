@@ -72,18 +72,21 @@ function Tracker({ session }) {
 
   const saveToday = async () => {
     setSaving(true);
-    const { error } = await supabase.from("entries").upsert({
-      user_id: userId,
-      entry_date: todayKey,
-      moods: draft.moods,
-      energy: draft.energy,
-      period: draft.period,
-      cried: draft.cried,
-      bloated: draft.bloated,
-      acne: draft.acne,
-      cold_sore: draft.coldSore,
-      notes: draft.notes,
-    });
+    const { error } = await supabase.from("entries").upsert(
+        {
+          user_id: userId,
+          entry_date: todayKey,
+          moods: draft.moods,
+          energy: draft.energy,
+          period: draft.period,
+          cried: draft.cried,
+          bloated: draft.bloated,
+          acne: draft.acne,
+          cold_sore: draft.coldSore,
+          notes: draft.notes,
+        },
+        { onConflict: "user_id,entry_date" }
+    );
     setEntries((prev) => ({ ...prev, [todayKey]: draft }));
     setSaving(false);
     setSaveMsg(error ? "Save failed" : "Saved");
@@ -293,9 +296,8 @@ function Tracker({ session }) {
 
                         <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${COLORS.line}` }}>
                           <div className="text-xs" style={{ color: COLORS.inkSoft }}>
-                            <b>How to read this:</b><br/>
-                            the first bullet is where that planet's energy is currently playing out — a life area, based on where it sits in your chart.<br/>
-                            The second bullet is whether that planet is forming a tense or easy angle with a different planet in your birth chart right now.</div>
+                            <b>How to read this:</b> the first bullet is where that planet's energy is currently playing out — a life area, based on where it sits in your chart. The second bullet is a separate, unrelated fact: whether that planet is forming a tense or easy angle with a different planet in your birth chart right now. The two bullets aren't connected to each other.
+                          </div>
                         </div>
                       </div>
                   )}
